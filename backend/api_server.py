@@ -86,6 +86,8 @@ def index():
 
 
 if __name__ == '__main__':
+    import os
+    
     # バックグラウンドで定期更新スレッドを起動
     update_thread = threading.Thread(target=update_train_info, daemon=True)
     update_thread.start()
@@ -97,6 +99,7 @@ if __name__ == '__main__':
     print("初回データ取得完了")
     
     # Flaskサーバーを起動
-    print("APIサーバーを起動します...")
-    print("アクセスURL: http://localhost:8080")
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    # Renderは環境変数PORTを使用
+    port = int(os.environ.get('PORT', 8080))
+    print(f"APIサーバーを起動します... ポート: {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
