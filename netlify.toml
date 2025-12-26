@@ -1,0 +1,20 @@
+# Netlify デプロイ設定ファイル
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # このファイルは参考用です
+  # Flutter環境がない場合は、手動デプロイ（ドラッグ&ドロップ）を推奨
+  command = "flutter build web --release"
+  publish = "build/web"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    X-Frame-Options = "ALLOWALL"
+    X-Content-Type-Options = "nosniff"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
