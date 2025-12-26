@@ -6,8 +6,7 @@ import '../models/train_info.dart';
 /// 列車運行情報を取得するAPIサービス
 class TrainInfoService {
   // RenderでデプロイしたバックエンドAPIのURL
-  // TODO: ステップ2-3でコピーしたRenderのURLに置き換えてください
-  static const String _baseUrl = 'YOUR-RENDER-URL-HERE';
+  static const String _baseUrl = 'https://train-alert.onrender.com';
   
   /// すべての列車運行情報を取得
   Future<List<TrainInfo>> fetchTrainInfo() async {
