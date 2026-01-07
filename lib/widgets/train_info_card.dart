@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/train_info.dart';
 
 /// 列車運行情報を表示するカードウィジェット
@@ -108,11 +109,39 @@ class TrainInfoCard extends StatelessWidget {
                   ),
                 ),
               ],
+              // 運行障害時のリンクボタン
+              if (!trainInfo.isNormal && trainInfo.officialUrl.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _launchUrl(trainInfo.officialUrl),
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('詳細を確認（公式サイト）'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _getStatusColor(),
+                      side: BorderSide(color: _getStatusColor()),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// URLを開く
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+    }
   }
 
   /// 運行状況に応じた色を取得

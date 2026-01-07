@@ -16,6 +16,20 @@ class TrainInfo {
     required this.updatedAt,
   });
 
+  /// 各鉄道会社の運行情報ページURLを取得
+  String get officialUrl {
+    switch (company) {
+      case '京阪電車':
+        return 'https://www.keihan.co.jp/traffic/information/';
+      case 'JR西日本':
+        return 'https://trafficinfo.westjr.co.jp/kinki.html';
+      case '近畿日本鉄道':
+        return 'https://www.kintetsu.jp/unkou/unkou.html';
+      default:
+        return '';
+    }
+  }
+
   /// JSONからTrainInfoオブジェクトを作成
   factory TrainInfo.fromJson(Map<String, dynamic> json) {
     return TrainInfo(
