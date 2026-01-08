@@ -25,6 +25,8 @@ class TrainInfo {
         return 'https://trafficinfo.westjr.co.jp/kinki.html';
       case '近畿日本鉄道':
         return 'https://www.kintetsu.jp/unkou/unkou.html';
+      case '阪急電車':
+        return 'https://www.hankyu.co.jp/railinfo/index.html';
       default:
         return '';
     }

@@ -181,6 +181,8 @@ class TrainInfoCard extends StatelessWidget {
         return const Color(0xFF0066B3); // JRブルー
       case '近畿日本鉄道':
         return const Color(0xFFE60012); // 近鉄レッド
+      case '阪急電車':
+        return const Color(0xFF8B0000); // 阪急マルーン
       default:
         return Colors.blue;
     }
