@@ -22,7 +22,7 @@ class TrainInfoService {
           'Accept': 'application/json',
         },
       ).timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 60), // Renderの起動を待つため60秒に延長
       );
 
       if (response.statusCode == 200) {
@@ -58,12 +58,39 @@ class TrainInfoService {
           'Accept': 'application/json',
         },
       ).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 30), // ヘルスチェックも延長
       );
 
       return response.statusCode == 200;
     } catch (e) {
       return false;
     }
+  }
+
+  /// 自動リトライ付きで列車運行情報を取得
+  Future<List<TrainInfo>> fetchTrainInfoWithRetry({int maxRetries = 2}) async {
+    int attempt = 0;
+    Exception? lastError;
+
+    while (attempt < maxRetries) {
+      try {
+        if (kDebugMode) {
+          debugPrint('運行情報取得試行: ${attempt + 1}/$maxRetries');
+        }
+        return await fetchTrainInfo();
+      } catch (e) {
+        lastError = e as Exception;
+        attempt++;
+        
+        if (attempt < maxRetries) {
+          if (kDebugMode) {
+            debugPrint('リトライまで30秒待機...');
+          }
+          await Future.delayed(const Duration(seconds: 30));
+        }
+      }
+    }
+
+    throw lastError ?? Exception('運行情報の取得に失敗しました');
   }
 }

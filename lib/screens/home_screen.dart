@@ -23,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _lastUpdateTime;
   Timer? _autoRefreshTimer;
   bool _notificationEnabled = true;
+  bool _isFirstLoad = true; // 初回読み込みかどうか
+  int _retryCount = 0; // リトライ回数
 
   @override
   void initState() {
@@ -55,11 +57,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final trainInfoList = await _trainInfoService.fetchTrainInfo();
+      // 初回読み込み時は自動リトライを使用
+      final trainInfoList = _isFirstLoad
+          ? await _trainInfoService.fetchTrainInfoWithRetry(maxRetries: 3)
+          : await _trainInfoService.fetchTrainInfo();
+      
       setState(() {
         _trainInfoList = trainInfoList;
         _lastUpdateTime = DateTime.now();
         _isLoading = false;
+        _isFirstLoad = false; // 初回読み込み完了
+        _retryCount = 0;
       });
 
       // 運行障害がある場合、通知を送信
@@ -71,10 +79,31 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
+      _retryCount++;
+      
+      // エラーメッセージを詳細に
+      String errorMsg;
+      if (_isFirstLoad) {
+        errorMsg = 'サーバー起動中です...\n'
+            '初回アクセス時は1分ほどかかる場合があります\n'
+            'しばらくお待ちください';
+      } else {
+        errorMsg = '運行情報の取得に失敗しました\n'
+            'ネットワーク接続を確認してください';
+      }
+      
       setState(() {
-        _errorMessage = '運行情報の取得に失敗しました';
+        _errorMessage = errorMsg;
         _isLoading = false;
       });
+      
+      // 初回読ま込み時のみ、自動リトライ（3回まで）
+      if (_isFirstLoad && _retryCount < 3) {
+        await Future.delayed(const Duration(seconds: 15));
+        if (mounted) {
+          _loadTrainInfo();
+        }
+      }
     }
   }
 
@@ -142,8 +171,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     if (_isLoading && _trainInfoList.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(
+              _isFirstLoad
+                  ? '運行情報を読み込んでいます...\n初回は少し時間がかかります'
+                  : '更新中...',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            if (_retryCount > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                '再試行中... ($_retryCount/3)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ],
+        ),
       );
     }
 
