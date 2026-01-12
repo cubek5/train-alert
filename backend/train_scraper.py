@@ -63,59 +63,84 @@ class TrainInfoScraper:
     def get_jr_west_info(self) -> List[Dict]:
         """JR西日本の運行情報を取得"""
         url = "https://trafficinfo.westjr.co.jp/kinki.html"
-        target_lines = ["奈良線", "京都線", "嵯峨野線", "湖西線"]
+        target_lines = {
+            "京都線": ["京都線", "ＪＲ京都線"],
+            "奈良線": ["奈良線"],
+            "嵯峨野線": ["嵯峨野線"],
+            "湖西線": ["湖西線"]
+        }
         
         try:
             response = self.session.get(url, timeout=10)
+            response.encoding = 'shift_jis'  # JR西日本はShift_JIS
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
             results = []
+            found_lines = {}  # 路線名: 情報辞書
             
-            # 運行情報を探す
-            info_sections = soup.find_all(['div', 'section'], class_=re.compile(r'(info|trouble|delay)', re.I))
+            # 運行情報一覧を取得（page_downクラス）
+            info_list = soup.find('ul', class_='page_down')
+            if info_list:
+                items = info_list.find_all('li')
+                for item in items:
+                    link = item.find('a')
+                    if not link:
+                        continue
+                    
+                    text = link.get_text()
+                    link_id = link.get('href', '').replace('#', '')
+                    
+                    # 対象路線かチェック
+                    for line_name, line_patterns in target_lines.items():
+                        if any(pattern in text for pattern in line_patterns):
+                            # 詳細情報を取得
+                            detail_anchor = soup.find('a', {'name': link_id})
+                            if detail_anchor:
+                                parent_div = detail_anchor.find_parent('div', class_='jisyo')
+                                if parent_div:
+                                    detail_text = parent_div.get_text()
+                                    
+                                    # 運転見合わせの検出
+                                    if '運転見合わせ' in text or '運転見合わせ' in detail_text:
+                                        status = '運転見合わせ'
+                                        delay_minutes = 0
+                                    elif '遅延' in text or '遅れ' in detail_text:
+                                        status = '遅延あり'
+                                        # 遅延時間を抽出
+                                        delay_match = re.search(r'(\d+)分', detail_text)
+                                        delay_minutes = int(delay_match.group(1)) if delay_match else 20
+                                    else:
+                                        status = '遅延あり'
+                                        delay_minutes = 20
+                                    
+                                    # 詳細情報を抽出（概要部分）
+                                    gaiyo = parent_div.find('p', class_='gaiyo')
+                                    if gaiyo:
+                                        details = gaiyo.get_text().strip().replace('\n', ' ').replace('\r', '')[:300]
+                                    else:
+                                        details = text
+                                    
+                                    found_lines[line_name] = {
+                                        'company': 'JR西日本',
+                                        'line': line_name,
+                                        'status': status,
+                                        'delay_minutes': delay_minutes,
+                                        'details': details,
+                                        'updated_at': datetime.now().isoformat()
+                                    }
+                                    break
             
-            # 情報がある路線を記録
-            found_lines = set()
-            
-            for section in info_sections:
-                text = section.get_text()
-                for line in target_lines:
-                    if line in text:
-                        found_lines.add(line)
-                        
-                        # 遅延情報を抽出
-                        delay_minutes = 0
-                        status = '遅延あり'
-                        
-                        # 運転見合わせの検出
-                        if '運転見合わせ' in text or '運転取り止め' in text or '運休' in text:
-                            status = '運転見合わせ'
-                        elif '遅延' in text or '遅れ' in text:
-                            status = '遅延あり'
-                            # 遅延時間を抽出
-                            delay_match = re.search(r'(\d+)分', text)
-                            if delay_match:
-                                delay_minutes = int(delay_match.group(1))
-                        
-                        details = text.strip()[:200]  # 最初の200文字
-                        
-                        line_info = {
-                            'company': 'JR西日本',
-                            'line': line,
-                            'status': status,
-                            'delay_minutes': delay_minutes,
-                            'details': details,
-                            'updated_at': datetime.now().isoformat()
-                        }
-                        results.append(line_info)
+            # 見つかった路線の情報を追加
+            for line_info in found_lines.values():
+                results.append(line_info)
             
             # 情報がない路線は平常運転とする
-            for line in target_lines:
-                if line not in found_lines:
+            for line_name in target_lines.keys():
+                if line_name not in found_lines:
                     results.append({
                         'company': 'JR西日本',
-                        'line': line,
+                        'line': line_name,
                         'status': '平常運転',
                         'delay_minutes': 0,
                         'details': '',
@@ -126,6 +151,8 @@ class TrainInfoScraper:
             
         except Exception as e:
             print(f"JR西日本の情報取得エラー: {e}")
+            import traceback
+            traceback.print_exc()
             return [{
                 'company': 'JR西日本',
                 'line': line,
@@ -133,7 +160,7 @@ class TrainInfoScraper:
                 'delay_minutes': 0,
                 'details': '現在、情報を取得できません',
                 'updated_at': datetime.now().isoformat()
-            } for line in target_lines]
+            } for line in target_lines.keys()]
 
     def get_kintetsu_info(self) -> List[Dict]:
         """近畿日本鉄道の運行情報を取得"""
