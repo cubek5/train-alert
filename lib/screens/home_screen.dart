@@ -4,7 +4,7 @@ import '../models/train_info.dart';
 import '../services/train_info_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/train_info_card.dart';
-import 'settings_screen.dart';
+import 'settings_screen.dart' deferred as settings;
 
 /// メイン画面: 列車運行情報一覧
 class HomeScreen extends StatefulWidget {
@@ -157,14 +157,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // 通知設定画面へ
+          // 通知設定画面へ（遅延読み込み）
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
+              // 設定画面を動的に読み込み
+              await settings.loadLibrary();
+              if (!mounted) return;
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
+                  builder: (context) => settings.SettingsScreen(),
                 ),
               );
               // 設定画面から戻ってきたら情報を再読み込み

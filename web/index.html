@@ -31,6 +31,11 @@
 
   <title>列車運行情報</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- リソースのプリロード（高速化） -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="flutter.js" as="script">
+  <link rel="dns-prefetch" href="https://train-alert.onrender.com">
 </head>
 <body style="margin: 0; padding: 0; background-color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
   <!-- Flutter読み込み中の表示 -->
@@ -75,15 +80,20 @@
     }
   </style>
   
-  <script src="flutter_bootstrap.js" async></script>
-  
   <script>
     // Flutterアプリが完全に読み込まれたらローディング画面を非表示
-    window.addEventListener('load', function() {
-      setTimeout(function() {
-        document.body.classList.add('flutter-loaded');
-      }, 500); // 0.5秒後にフェードアウト
+    window.addEventListener('flutter-first-frame', function() {
+      document.body.classList.add('flutter-loaded');
     });
+    
+    // フォールバック: 最大15秒でローディング画面を非表示
+    setTimeout(function() {
+      if (!document.body.classList.contains('flutter-loaded')) {
+        document.body.classList.add('flutter-loaded');
+      }
+    }, 15000);
   </script>
+  
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
