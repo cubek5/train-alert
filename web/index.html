@@ -125,28 +125,14 @@
       }, 2000); // 2秒後にチェック
     });
     
-    // カスタムService Workerの登録（最適化されたキャッシュ戦略）
+    // Service Worker登録（一時的に無効化 - 無限ループ防止）
+    // カスタムService Workerは後で有効化
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw-custom.js')
-          .then((registration) => {
-            console.log('SW registered:', registration);
-            // 新しいService Workerが待機中の場合、即座にアクティベート
-            if (registration.waiting) {
-              registration.waiting.postMessage({ action: 'skipWaiting' });
-            }
-          })
-          .catch((error) => {
-            console.log('SW registration failed:', error);
-            // フォールバック: Flutterデフォルトを使用
-            navigator.serviceWorker.register('flutter_service_worker.js');
-          });
-        
-        // Service Workerの更新を監視
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('SW controller changed - reloading');
-          window.location.reload();
-        });
+      // 既存のService Workerをアンレジスター
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
       });
     }
     
