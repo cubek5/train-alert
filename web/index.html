@@ -110,6 +110,21 @@
   </style>
   
   <script>
+    // 早期初期化チェック（DOMContentLoaded）
+    let earlyLoadDetected = false;
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM ready - checking for early Flutter load');
+      // Flutterが既に読み込み済みかチェック
+      setTimeout(function() {
+        const flutterRoot = document.querySelector('flt-glass-pane');
+        if (flutterRoot) {
+          console.log('Flutter already loaded at DOMContentLoaded');
+          earlyLoadDetected = true;
+          document.body.classList.add('flutter-loaded');
+        }
+      }, 2000); // 2秒後にチェック
+    });
+    
     // カスタムService Workerの登録（最適化されたキャッシュ戦略）
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -137,18 +152,44 @@
     
     // 起動時間の測定
     const startTime = performance.now();
+    let loadCompleted = false;
     
     // Flutterアプリが完全に読み込まれたらローディング画面を非表示
     window.addEventListener('flutter-first-frame', function() {
-      const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
-      console.log(`Flutter起動完了: ${loadTime}秒`);
-      document.body.classList.add('flutter-loaded');
+      if (!loadCompleted) {
+        loadCompleted = true;
+        const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+        console.log(`Flutter起動完了: ${loadTime}秒`);
+        document.body.classList.add('flutter-loaded');
+      }
     });
     
-    // フォールバック: 最大20秒でローディング画面を非表示
+    // プログレス表示の更新
+    let progressSeconds = 0;
+    const progressInterval = setInterval(function() {
+      progressSeconds++;
+      if (progressSeconds >= 10 && !loadCompleted) {
+        console.log(`読み込み中... ${progressSeconds}秒経過`);
+      }
+      if (loadCompleted) {
+        clearInterval(progressInterval);
+      }
+    }, 1000);
+    
+    // フォールバック1: 10秒でローディング画面を非表示（プレビュー対応）
+    setTimeout(function() {
+      if (!loadCompleted && !document.body.classList.contains('flutter-loaded')) {
+        console.warn('フォールバック1: 10秒でローディング画面を非表示');
+        loadCompleted = true;
+        document.body.classList.add('flutter-loaded');
+      }
+    }, 10000);
+    
+    // フォールバック2: 最大20秒で強制的に非表示
     setTimeout(function() {
       if (!document.body.classList.contains('flutter-loaded')) {
-        console.warn('タイムアウト: Flutterの起動に20秒以上かかりました');
+        console.warn('フォールバック2: 20秒で強制的にローディング画面を非表示');
+        loadCompleted = true;
         document.body.classList.add('flutter-loaded');
       }
     }, 20000);
