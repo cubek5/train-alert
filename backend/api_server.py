@@ -52,9 +52,39 @@ def get_train_info():
         train_info_cache = scraper.get_all_train_info()
         last_update_time = datetime.now()
     
+    # 路線の表示順序を定義
+    line_order = [
+        ('JR西日本', '奈良線'),
+        ('JR西日本', '京都線'),
+        ('JR西日本', '琵琶湖線'),
+        ('JR西日本', '湖西線'),
+        ('JR西日本', '嵯峨野線'),
+        ('JR西日本', '学研都市線'),
+        ('京阪電車', '本線'),
+        ('阪急電車', '京都線'),
+        ('近畿日本鉄道', '京都線'),
+        ('京都市営地下鉄', '烏丸線'),
+        ('京都市営地下鉄', '東西線')
+    ]
+    
+    # データを指定された順序でソート
+    data = train_info_cache.get('data', [])
+    
+    def get_sort_key(item):
+        """ソートキーを取得"""
+        company = item.get('company', '')
+        line = item.get('line', '')
+        try:
+            return line_order.index((company, line))
+        except ValueError:
+            # リストに無い場合は最後に配置
+            return len(line_order)
+    
+    sorted_data = sorted(data, key=get_sort_key)
+    
     response = {
         'status': 'success',
-        'data': train_info_cache.get('data', []),
+        'data': sorted_data,
         'timestamp': train_info_cache.get('timestamp', datetime.now().isoformat()),
         'next_update': UPDATE_INTERVAL
     }

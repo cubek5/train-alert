@@ -138,11 +138,11 @@ class TrainInfoScraper:
         """JR西日本の運行情報を取得（公式サイト + 学研都市線追加）"""
         url = "https://trafficinfo.westjr.co.jp/kinki.html"
         target_lines = {
-            "琵琶湖線": ["琵琶湖線"],  # 追加
-            "京都線": ["京都線", "ＪＲ京都線"],
             "奈良線": ["奈良線"],
-            "嵯峨野線": ["嵯峨野線"],
+            "京都線": ["京都線", "ＪＲ京都線"],
+            "琵琶湖線": ["琵琶湖線"],
             "湖西線": ["湖西線"],
+            "嵯峨野線": ["嵯峨野線"],
             "学研都市線": ["学研都市線", "片町線"]
         }
         
@@ -402,8 +402,8 @@ class TrainInfoScraper:
         # 指定された順番で路線を並び替え
         ordered_info = []
         
-        # 1-5. JR西日本（指定順）
-        jr_lines_order = ['奈良線', '京都線', '嵯峨野線', '湖西線', '学研都市線']
+        # 1-6. JR西日本（指定順）
+        jr_lines_order = ['奈良線', '京都線', '琵琶湖線', '湖西線', '嵯峨野線', '学研都市線']
         if 'JR西日本' in temp_data:
             jr_data = {item['line']: item for item in temp_data['JR西日本']}
             for line in jr_lines_order:
