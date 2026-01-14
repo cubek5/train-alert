@@ -18,21 +18,96 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="京都周辺の列車運行情報をリアルタイムで確認">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="flutter_app">
+  <meta name="apple-mobile-web-app-title" content="列車運行情報">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>flutter_app</title>
+  <title>列車運行情報</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Flutter読み込み中の表示 -->
+  <div id="loading" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 9999;
+  ">
+    <div style="
+      text-align: center;
+      padding: 20px;
+    ">
+      <!-- ローディングアニメーション -->
+      <div style="
+        width: 60px;
+        height: 60px;
+        border: 4px solid #f0f0f0;
+        border-top: 4px solid #0066B3;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 24px;
+      "></div>
+      
+      <!-- タイトル -->
+      <h1 style="
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+        margin: 0 0 16px 0;
+      ">列車運行情報</h1>
+      
+      <!-- メッセージ -->
+      <p style="
+        font-size: 16px;
+        color: #666;
+        margin: 0 0 8px 0;
+        line-height: 1.6;
+      ">初回読み込み中...</p>
+      
+      <p style="
+        font-size: 14px;
+        color: #999;
+        margin: 0;
+      ">約30〜60秒程度かかる場合があります</p>
+    </div>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Flutterアプリが読み込まれたらローディング画面を非表示 */
+    body.flutter-loaded #loading {
+      display: none;
+    }
+  </style>
+  
   <script src="flutter_bootstrap.js" async></script>
+  
+  <script>
+    // Flutterアプリが完全に読み込まれたらローディング画面を非表示
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        document.body.classList.add('flutter-loaded');
+      }, 500); // 0.5秒後にフェードアウト
+    });
+  </script>
 </body>
 </html>
