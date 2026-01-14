@@ -81,6 +81,13 @@
   </style>
   
   <script>
+    // Service Workerの登録（キャッシュによる高速化）
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('flutter_service_worker.js');
+      });
+    }
+    
     // Flutterアプリが完全に読み込まれたらローディング画面を非表示
     window.addEventListener('flutter-first-frame', function() {
       document.body.classList.add('flutter-loaded');
