@@ -32,36 +32,12 @@
   <title>列車運行情報</title>
   <link rel="manifest" href="manifest.json">
 </head>
-<body>
+<body style="margin: 0; padding: 0; background-color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
   <!-- Flutter読み込み中の表示 -->
-  <div id="loading" style="
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    z-index: 9999;
-  ">
-    <div style="
-      text-align: center;
-      padding: 20px;
-    ">
+  <div id="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; z-index: 9999;">
+    <div style="text-align: center; padding: 20px;">
       <!-- ローディングアニメーション -->
-      <div style="
-        width: 60px;
-        height: 60px;
-        border: 4px solid #f0f0f0;
-        border-top: 4px solid #0066B3;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 24px;
-      "></div>
+      <div style="width: 60px; height: 60px; border: 4px solid #f0f0f0; border-top: 4px solid #0066B3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 24px;"></div>
       
       <!-- タイトル -->
       <h1 style="
