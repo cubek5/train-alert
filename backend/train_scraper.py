@@ -138,11 +138,12 @@ class TrainInfoScraper:
         """JR西日本の運行情報を取得（公式サイト + 学研都市線追加）"""
         url = "https://trafficinfo.westjr.co.jp/kinki.html"
         target_lines = {
+            "琵琶湖線": ["琵琶湖線"],  # 追加
             "京都線": ["京都線", "ＪＲ京都線"],
             "奈良線": ["奈良線"],
             "嵯峨野線": ["嵯峨野線"],
             "湖西線": ["湖西線"],
-            "学研都市線": ["学研都市線", "片町線"]  # 追加
+            "学研都市線": ["学研都市線", "片町線"]
         }
         
         try:
@@ -153,8 +154,17 @@ class TrainInfoScraper:
             results = []
             found_lines = {}
             
-            # 運行情報一覧を取得
+            # 運行情報一覧を取得（HTMLの構造に合わせて修正）
+            # 方法1: ul.page_downを探す（従来の方法）
             info_list = soup.find('ul', class_='page_down')
+            if not info_list:
+                # 方法2: すべてのulタグからli > aを含むものを探す
+                all_uls = soup.find_all('ul')
+                for ul in all_uls:
+                    if ul.find('li') and ul.find('a'):
+                        info_list = ul
+                        break
+            
             if info_list:
                 items = info_list.find_all('li')
                 for item in items:
@@ -207,6 +217,25 @@ class TrainInfoScraper:
                                         'details': details,
                                         'updated_at': datetime.now().isoformat()
                                     }
+                                    
+                                    # 【重要】影響線区を解析して、他の対象路線にも情報を設定
+                                    # 影響線区は <span class='line'> に記載されている
+                                    line_spans = parent_div.find_all('span', class_='line')
+                                    for line_span in line_spans:
+                                        line_text = line_span.get_text()
+                                        # 各対象路線をチェック
+                                        for check_line_name, check_patterns in target_lines.items():
+                                            if check_line_name not in found_lines:  # まだ登録されていない路線
+                                                if any(pattern in line_text for pattern in check_patterns):
+                                                    # 影響を受けている路線として登録
+                                                    found_lines[check_line_name] = {
+                                                        'company': 'JR西日本',
+                                                        'line': check_line_name,
+                                                        'status': status,
+                                                        'delay_minutes': delay_minutes,
+                                                        'details': details,  # 同じ詳細情報を使用
+                                                        'updated_at': datetime.now().isoformat()
+                                                    }
                                     break
             
             # 見つかった路線の情報を追加
