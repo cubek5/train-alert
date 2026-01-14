@@ -238,6 +238,8 @@ class TrainInfoScraper:
                 'updated_at': datetime.now().isoformat()
             } for line in target_lines.keys()]
 
+
+
     def get_kintetsu_info(self) -> List[Dict]:
         """近畿日本鉄道の運行情報を取得（Yahoo!ハイブリッド）"""
         # Yahoo!路線情報から取得（より正確）
@@ -346,32 +348,67 @@ class TrainInfoScraper:
 
     def get_all_train_info(self) -> Dict:
         """すべての鉄道会社の運行情報を並列取得（高速化）"""
-        all_info = []
-        
         # 並列処理で全路線を同時取得
         with ThreadPoolExecutor(max_workers=6) as executor:
             # 各社の取得タスクを登録
             futures = {
-                executor.submit(self.get_keihan_info): '京阪電車',
                 executor.submit(self.get_jr_west_info): 'JR西日本',
-                executor.submit(self.get_kintetsu_info): '近畿日本鉄道',
+                executor.submit(self.get_keihan_info): '京阪電車',
                 executor.submit(self.get_hankyu_info): '阪急電車',
+                executor.submit(self.get_kintetsu_info): '近畿日本鉄道',
                 executor.submit(self.get_kyoto_subway_info): '京都市営地下鉄',
             }
             
-            # 完了した順に結果を取得
+            # 完了した順に結果を一時保存
+            temp_data = {}
             for future in as_completed(futures):
                 company = futures[future]
                 try:
                     result = future.result()
-                    all_info.extend(result)
+                    temp_data[company] = result
                 except Exception as e:
                     print(f"{company}の情報取得エラー: {e}")
+                    temp_data[company] = []
+        
+        # 指定された順番で路線を並び替え
+        ordered_info = []
+        
+        # 1-5. JR西日本（指定順）
+        jr_lines_order = ['京都線', '奈良線', '嵯峨野線', '学研都市線', '湖西線']
+        if 'JR西日本' in temp_data:
+            jr_data = {item['line']: item for item in temp_data['JR西日本']}
+            for line in jr_lines_order:
+                if line in jr_data:
+                    ordered_info.append(jr_data[line])
+        
+        # 6. 京阪電車 本線
+        if '京阪電車' in temp_data:
+            ordered_info.extend(temp_data['京阪電車'])
+        
+        # 7. 阪急電車 京都線
+        if '阪急電車' in temp_data:
+            ordered_info.extend(temp_data['阪急電車'])
+        
+        # 8. 京都市営地下鉄 烏丸線
+        if '京都市営地下鉄' in temp_data:
+            subway_data = {item['line']: item for item in temp_data['京都市営地下鉄']}
+            if '烏丸線' in subway_data:
+                ordered_info.append(subway_data['烏丸線'])
+        
+        # 9. 近畿日本鉄道 京都線
+        if '近畿日本鉄道' in temp_data:
+            ordered_info.extend(temp_data['近畿日本鉄道'])
+        
+        # 10. 京都市営地下鉄 東西線
+        if '京都市営地下鉄' in temp_data:
+            subway_data = {item['line']: item for item in temp_data['京都市営地下鉄']}
+            if '東西線' in subway_data:
+                ordered_info.append(subway_data['東西線'])
         
         return {
             'status': 'success',
             'timestamp': datetime.now().isoformat(),
-            'data': all_info
+            'data': ordered_info
         }
 
 
