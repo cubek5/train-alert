@@ -374,7 +374,7 @@ class TrainInfoScraper:
         ordered_info = []
         
         # 1-5. JR西日本（指定順）
-        jr_lines_order = ['京都線', '奈良線', '嵯峨野線', '湖西線', '学研都市線']
+        jr_lines_order = ['奈良線', '京都線', '嵯峨野線', '湖西線', '学研都市線']
         if 'JR西日本' in temp_data:
             jr_data = {item['line']: item for item in temp_data['JR西日本']}
             for line in jr_lines_order:
