@@ -94,8 +94,34 @@ class TrainInfoCard extends StatelessWidget {
                   ],
                 ],
               ),
+              // 運転再開見込み時刻（遅延・運転見合わせ時）
+              if (trainInfo.resumeTime != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule, color: Colors.amber, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '再開見込み: ${trainInfo.resumeTime}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               // 詳細情報
-              if (trainInfo.details.isNotEmpty) ...[
+              if (trainInfo.detailsWithoutResumeTime.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -104,7 +130,7 @@ class TrainInfoCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    trainInfo.details,
+                    trainInfo.detailsWithoutResumeTime,
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
@@ -183,6 +209,8 @@ class TrainInfoCard extends StatelessWidget {
         return const Color(0xFFE60012); // 近鉄レッド
       case '阪急電車':
         return const Color(0xFF8B0000); // 阪急マルーン
+      case '京都市営地下鉄':
+        return const Color(0xFF008000); // 地下鉄グリーン
       default:
         return Colors.blue;
     }

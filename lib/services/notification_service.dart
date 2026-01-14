@@ -49,6 +49,13 @@ class NotificationService {
     }
   }
 
+  /// 路線が通知対象かチェック
+  Future<bool> _isLineNotificationEnabled(String company, String line) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'notify_${company}_$line';
+    return prefs.getBool(key) ?? true; // デフォルトは有効
+  }
+
   /// 運行障害を通知
   Future<void> notifyTrainIssue(TrainInfo trainInfo) async {
     if (!_initialized) return;
@@ -60,6 +67,13 @@ class NotificationService {
     if (trainInfo.isNormal || trainInfo.isError) {
       return;
     }
+
+    // 路線が通知対象かチェック
+    final lineEnabled = await _isLineNotificationEnabled(
+      trainInfo.company,
+      trainInfo.line,
+    );
+    if (!lineEnabled) return;
 
     // すでに通知済みの場合はスキップ
     final lineKey = '${trainInfo.company}_${trainInfo.line}';
@@ -73,6 +87,11 @@ class NotificationService {
 
     if (trainInfo.hasDelay) {
       body += ' (約${trainInfo.delayMinutes}分遅れ)';
+    }
+
+    // 運転再開見込み時刻がある場合は追加
+    if (trainInfo.resumeTime != null) {
+      body += '\n再開見込み: ${trainInfo.resumeTime}';
     }
 
     const androidDetails = AndroidNotificationDetails(

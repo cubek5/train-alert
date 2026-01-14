@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-列車運行情報スクレイピングサーバー（ハイブリッド版）
-- JR西日本: 公式サイト（最新・正確）
-- 私鉄各社: Yahoo!路線情報（安定・高速）
-- 並列処理で速度改善
+列車運行情報スクレイピングサーバー（強化版）
+- 全路線を各社公式サイト + Yahoo!路線情報のハイブリッド取得
+- 路線追加: JR学研都市線、京都市営地下鉄
+- 並列処理で高速化
+- エラーリトライ機能で信頼性向上
+- 運転再開見込み時刻の取得
 """
 
 import json
 import re
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from bs4 import BeautifulSoup
+import time
 
 
 class TrainInfoScraper:
-    """列車運行情報を取得するスクレイパー（ハイブリッド版）"""
+    """列車運行情報を取得するスクレイパー（強化版）"""
 
     def __init__(self):
         self.headers = {
@@ -25,93 +28,127 @@ class TrainInfoScraper:
         }
         self.session = requests.Session()
         self.session.headers.update(self.headers)
-        
-        # Yahoo!路線情報のURL定義（私鉄のみ）
-        self.yahoo_urls = {
-            '京阪電車': {
-                '本線': 'https://transit.yahoo.co.jp/diainfo/300/0'
-            },
-            '近畿日本鉄道': {
-                '京都線': 'https://transit.yahoo.co.jp/diainfo/288/0'
-            },
-            '阪急電車': {
-                '京都線': 'https://transit.yahoo.co.jp/diainfo/306/0'
-            }
-        }
 
-    def get_yahoo_line_info(self, company: str, line: str, url: str) -> Dict:
-        """Yahoo!路線情報から運行情報を取得（私鉄用）"""
+    def _fetch_with_retry(self, url: str, encoding: str = 'utf-8', max_retries: int = 2) -> Optional[BeautifulSoup]:
+        """リトライ機能付きHTTP取得"""
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, timeout=8)
+                response.encoding = encoding
+                response.raise_for_status()
+                return BeautifulSoup(response.content, 'html.parser')
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)  # 0.5秒待機してリトライ
+                    continue
+                print(f"取得エラー ({url}): {e}")
+                return None
+        return None
+
+    def _get_yahoo_line_info(self, line_code: str, line_name: str, company: str) -> Dict:
+        """Yahoo!路線情報から取得（ハイブリッド用）"""
+        url = f"https://transit.yahoo.co.jp/diainfo/{line_code}/0"
+        
         try:
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._fetch_with_retry(url)
+            if not soup:
+                raise Exception("ページ取得失敗")
             
-            # 運行状況セクションを探す
-            status_section = soup.find('div', id='mdServiceStatus')
-            if not status_section:
-                raise Exception("運行情報セクションが見つかりません")
+            # 運行状況を取得
+            status_elem = soup.select_one('.trouble')
             
-            # ステータステキストを取得
-            status_dt = status_section.find('dt')
-            status_dd = status_section.find('dd')
+            if status_elem and '平常運転' not in status_elem.get_text():
+                # 遅延または運転見合わせ
+                title = status_elem.select_one('h3')
+                if title:
+                    status_text = title.get_text(strip=True)
+                    
+                    if '運転見合わせ' in status_text or '運休' in status_text:
+                        status = '運転見合わせ'
+                        delay_minutes = 0
+                    else:
+                        status = '遅延あり'
+                        # 遅延時間を抽出
+                        delay_match = re.search(r'(\d+)分', status_text)
+                        delay_minutes = int(delay_match.group(1)) if delay_match else 20
+                    
+                    # 詳細情報を取得
+                    detail_elem = status_elem.select_one('.trouble-detail')
+                    if detail_elem:
+                        details = detail_elem.get_text(strip=True)[:300]
+                    else:
+                        details = status_text
+                    
+                    # 運転再開見込み時刻を抽出
+                    resume_time = self._extract_resume_time(details)
+                    if resume_time:
+                        details = f"【再開見込み: {resume_time}】 {details}"
+                    
+                    return {
+                        'company': company,
+                        'line': line_name,
+                        'status': status,
+                        'delay_minutes': delay_minutes,
+                        'details': details,
+                        'updated_at': datetime.now().isoformat()
+                    }
             
-            if not status_dt or not status_dd:
-                raise Exception("ステータス情報が見つかりません")
-            
-            # ステータステキストから状態を判定
-            status_text = status_dt.get_text(strip=True)
-            details_text = status_dd.get_text(strip=True)
-            
-            # 状態判定
-            if '平常' in status_text:
-                status = '平常運転'
-                delay_minutes = 0
-            elif '遅延' in status_text or '遅れ' in status_text:
-                status = '遅延あり'
-                delay_match = re.search(r'(\d+)分', details_text)
-                delay_minutes = int(delay_match.group(1)) if delay_match else 15
-            elif '見合わせ' in status_text or '運休' in status_text:
-                status = '運転見合わせ'
-                delay_minutes = 0
-            else:
-                status = '情報取得エラー'
-                delay_minutes = 0
-            
+            # 平常運転
             return {
                 'company': company,
-                'line': line,
-                'status': status,
-                'delay_minutes': delay_minutes,
-                'details': details_text if status != '平常運転' else '',
+                'line': line_name,
+                'status': '平常運転',
+                'delay_minutes': 0,
+                'details': '',
                 'updated_at': datetime.now().isoformat()
             }
             
         except Exception as e:
-            print(f"{company} {line}の情報取得エラー: {e}")
+            print(f"Yahoo!路線情報取得エラー ({line_name}): {e}")
             return {
                 'company': company,
-                'line': line,
+                'line': line_name,
                 'status': '情報取得エラー',
                 'delay_minutes': 0,
                 'details': '現在、情報を取得できません',
                 'updated_at': datetime.now().isoformat()
             }
 
+    def _extract_resume_time(self, text: str) -> Optional[str]:
+        """運転再開見込み時刻を抽出"""
+        patterns = [
+            r'(\d{1,2}[：:]\d{2})頃',
+            r'(\d{1,2}時\d{1,2}分)頃',
+            r'見込み[：:]\s*(\d{1,2}[：:]\d{2})',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return match.group(1).replace('：', ':')
+        
+        return None
+
+    def get_keihan_info(self) -> List[Dict]:
+        """京阪電車の運行情報を取得（Yahoo!ハイブリッド）"""
+        # Yahoo!路線情報から取得（より正確）
+        return [self._get_yahoo_line_info('300', '本線', '京阪電車')]
+
     def get_jr_west_info(self) -> List[Dict]:
-        """JR西日本の運行情報を取得（公式サイト優先）"""
+        """JR西日本の運行情報を取得（公式サイト + 学研都市線追加）"""
         url = "https://trafficinfo.westjr.co.jp/kinki.html"
         target_lines = {
             "京都線": ["京都線", "ＪＲ京都線"],
             "奈良線": ["奈良線"],
             "嵯峨野線": ["嵯峨野線"],
-            "湖西線": ["湖西線"]
+            "湖西線": ["湖西線"],
+            "学研都市線": ["学研都市線", "片町線"]  # 追加
         }
         
         try:
-            response = self.session.get(url, timeout=10)
-            response.encoding = 'shift_jis'
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = self._fetch_with_retry(url, encoding='shift_jis')
+            if not soup:
+                raise Exception("ページ取得失敗")
             
             results = []
             found_lines = {}
@@ -157,6 +194,11 @@ class TrainInfoScraper:
                                     else:
                                         details = text
                                     
+                                    # 運転再開見込み時刻を抽出
+                                    resume_time = self._extract_resume_time(detail_text)
+                                    if resume_time:
+                                        details = f"【再開見込み: {resume_time}】 {details}"
+                                    
                                     found_lines[line_name] = {
                                         'company': 'JR西日本',
                                         'line': line_name,
@@ -187,8 +229,6 @@ class TrainInfoScraper:
             
         except Exception as e:
             print(f"JR西日本の情報取得エラー: {e}")
-            import traceback
-            traceback.print_exc()
             return [{
                 'company': 'JR西日本',
                 'line': line,
@@ -198,25 +238,110 @@ class TrainInfoScraper:
                 'updated_at': datetime.now().isoformat()
             } for line in target_lines.keys()]
 
-    def get_keihan_info(self) -> List[Dict]:
-        """京阪電車の運行情報を取得"""
-        results = []
-        for line, url in self.yahoo_urls['京阪電車'].items():
-            results.append(self.get_yahoo_line_info('京阪電車', line, url))
-        return results
-
     def get_kintetsu_info(self) -> List[Dict]:
-        """近畿日本鉄道の運行情報を取得"""
-        results = []
-        for line, url in self.yahoo_urls['近畿日本鉄道'].items():
-            results.append(self.get_yahoo_line_info('近畿日本鉄道', line, url))
-        return results
+        """近畿日本鉄道の運行情報を取得（Yahoo!ハイブリッド）"""
+        # Yahoo!路線情報から取得（より正確）
+        return [self._get_yahoo_line_info('288', '京都線', '近畿日本鉄道')]
 
     def get_hankyu_info(self) -> List[Dict]:
-        """阪急電車の運行情報を取得"""
+        """阪急電車の運行情報を取得（公式サイト）"""
+        url = "https://www.hankyu.co.jp/railinfo/include/page_railinfo.html"
+        
+        try:
+            soup = self._fetch_with_retry(url)
+            if not soup:
+                raise Exception("ページ取得失敗")
+            
+            # 運行情報のリストを取得
+            line_items = soup.select('.sec02_inner_cnt > ul > li')
+            
+            for item in line_items:
+                line_div = item.select_one('.sec02_inner_cnt_line')
+                if not line_div:
+                    continue
+                
+                # 路線名を取得
+                line_name_elem = line_div.select_one('h3 span')
+                if not line_name_elem:
+                    continue
+                
+                line_name = line_name_elem.get_text(strip=True)
+                
+                # 京都線のみを処理
+                if '京都線' not in line_name:
+                    continue
+                
+                # 運行状況を取得
+                status_elem = line_div.select_one('p')
+                if not status_elem:
+                    continue
+                
+                status_text = status_elem.get_text(strip=True)
+                
+                # ステータスとアイコンから状態を判定
+                delay_minutes = 0
+                details = ''
+                
+                if 'icon_railinfo_01' in str(status_elem) or '平常運転' in status_text:
+                    status = '平常運転'
+                elif 'icon_railinfo_02' in str(status_elem) or '運転見合わせ' in status_text:
+                    status = '運転見合わせ'
+                    details = status_text
+                elif 'icon_railinfo_03' in str(status_elem) or '遅延' in status_text:
+                    status = '遅延あり'
+                    delay_minutes = 20  # 阪急は20分以上の遅延で表示
+                    details = status_text
+                else:
+                    status = '平常運転' if '平常' in status_text else status_text
+                
+                # 運転再開見込み時刻を抽出
+                if details:
+                    resume_time = self._extract_resume_time(details)
+                    if resume_time:
+                        details = f"【再開見込み: {resume_time}】 {details}"
+                
+                return [{
+                    'company': '阪急電車',
+                    'line': '京都線',
+                    'status': status,
+                    'delay_minutes': delay_minutes,
+                    'details': details,
+                    'updated_at': datetime.now().isoformat()
+                }]
+            
+            # 京都線が見つからない場合（平常運転扱い）
+            return [{
+                'company': '阪急電車',
+                'line': '京都線',
+                'status': '平常運転',
+                'delay_minutes': 0,
+                'details': '',
+                'updated_at': datetime.now().isoformat()
+            }]
+            
+        except Exception as e:
+            print(f"阪急電車の情報取得エラー: {e}")
+            return [{
+                'company': '阪急電車',
+                'line': '京都線',
+                'status': '情報取得エラー',
+                'delay_minutes': 0,
+                'details': '現在、情報を取得できません',
+                'updated_at': datetime.now().isoformat()
+            }]
+
+    def get_kyoto_subway_info(self) -> List[Dict]:
+        """京都市営地下鉄の運行情報を取得（Yahoo!路線情報）"""
         results = []
-        for line, url in self.yahoo_urls['阪急電車'].items():
-            results.append(self.get_yahoo_line_info('阪急電車', line, url))
+        
+        # 烏丸線
+        karasuma = self._get_yahoo_line_info('341', '烏丸線', '京都市営地下鉄')
+        results.append(karasuma)
+        
+        # 東西線
+        tozai = self._get_yahoo_line_info('342', '東西線', '京都市営地下鉄')
+        results.append(tozai)
+        
         return results
 
     def get_all_train_info(self) -> Dict:
@@ -224,13 +349,14 @@ class TrainInfoScraper:
         all_info = []
         
         # 並列処理で全路線を同時取得
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=6) as executor:
             # 各社の取得タスクを登録
             futures = {
                 executor.submit(self.get_keihan_info): '京阪電車',
                 executor.submit(self.get_jr_west_info): 'JR西日本',
                 executor.submit(self.get_kintetsu_info): '近畿日本鉄道',
                 executor.submit(self.get_hankyu_info): '阪急電車',
+                executor.submit(self.get_kyoto_subway_info): '京都市営地下鉄',
             }
             
             # 完了した順に結果を取得

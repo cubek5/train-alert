@@ -27,9 +27,26 @@ class TrainInfo {
         return 'https://www.kintetsu.jp/unkou/unkou.html';
       case '阪急電車':
         return 'https://www.hankyu.co.jp/railinfo/index.html';
+      case '京都市営地下鉄':
+        return 'https://www.city.kyoto.lg.jp/kotsu/page/0000009397.html';
       default:
         return '';
     }
+  }
+
+  /// 運転再開見込み時刻を抽出
+  String? get resumeTime {
+    if (details.isEmpty) return null;
+    
+    final regex = RegExp(r'【再開見込み:\s*(.+?)】');
+    final match = regex.firstMatch(details);
+    return match?.group(1);
+  }
+
+  /// 詳細情報から再開見込み時刻を除いた本文
+  String get detailsWithoutResumeTime {
+    if (resumeTime == null) return details;
+    return details.replaceFirst(RegExp(r'【再開見込み:\s*.+?】\s*'), '');
   }
 
   /// JSONからTrainInfoオブジェクトを作成
