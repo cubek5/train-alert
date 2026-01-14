@@ -64936,7 +64936,7 @@ if(b?r.A(s,a):r.B(s,a))this.R()}}
 A.Ny.prototype={}
 A.H_.prototype={
 N(a){var s=null
-return new A.uM(B.BT,"Train Alert",A.afS(B.xs,s,A.aik(B.V,s,s,B.bx),!0),!1,s)}}
+return new A.uM(B.BT,"\u901a\u5b66\u570f\u9244\u9053\u904b\u884c\u60c5\u5831",A.afS(B.xs,s,A.aik(B.V,s,s,B.bx),!0),!1,s)}}
 A.kz.prototype={
 gNH(){switch(this.a){case"\u4eac\u962a\u96fb\u8eca":return"https://www.keihan.co.jp/traffic/information/"
 case"JR\u897f\u65e5\u672c":return"https://trafficinfo.westjr.co.jp/kinki.html"
@@ -65040,7 +65040,7 @@ return A.Q($async$t6,r)},
 N(a){var s,r=this,q=null,p=r.z,o=t.F
 p=A.mH(A.d([A.UD(p?B.C0:B.C1,q,q,20),new A.GL(p,r.ga2F(),q)],o),B.a7,B.ag,B.ar,0)
 s=A.aeZ(q,q,B.Cc,q,q,new A.a8a(r,a),q,q,q)
-return A.aku(A.ahW(A.d([new A.cm(B.BB,p,q),s,A.aeZ(q,q,B.Cb,q,q,r.r?q:r.gyd(),q,q,q)],o),q,B.OZ),A.FA(!0,r.V2(),B.at,!0))},
+return A.aku(A.ahW(A.d([new A.cm(B.BB,p,q),s,A.aeZ(q,q,B.Cb,q,q,r.r?q:r.gyd(),q,q,q)],o),q,B.P3),A.FA(!0,r.V2(),B.at,!0))},
 V2(){var s,r,q,p=this,o=null
 if(p.r&&J.ld(p.f)){s=p.Q?"\u904b\u884c\u60c5\u5831\u3092\u8aad\u307f\u8fbc\u3093\u3067\u3044\u307e\u3059...\n\u521d\u56de\u306f\u5c11\u3057\u6642\u9593\u304c\u304b\u304b\u308a\u307e\u3059":"\u66f4\u65b0\u4e2d..."
 r=t.F
@@ -65049,7 +65049,7 @@ q=p.as
 if(q>0)B.b.I(s,A.d([B.dO,A.eZ("\u518d\u8a66\u884c\u4e2d... ("+q+"/3)",A.hY(o,o,B.hf,o,o,o,o,o,o,o,o,12,o,o,o,o,o,!0,o,o,o,o,o,o,o,o),o)],r))
 return A.BK(A.rY(s,B.a7,B.ik,B.ar),o,o)}if(p.w!=null&&J.ld(p.f)){s=p.w
 s.toString
-return A.BK(A.rY(A.d([B.Ce,B.ja,A.eZ(s,B.MP,B.cy),B.ja,new A.CK(p.gyd(),o,o,o,o,o,o,!1,o,o,B.P1,o)],t.F),B.a7,B.ik,B.ar),o,o)}s=A.d([],t.F)
+return A.BK(A.rY(A.d([B.Ce,B.ja,A.eZ(s,B.MP,B.cy),B.ja,new A.CK(p.gyd(),o,o,o,o,o,o,!1,o,o,B.P0,o)],t.F),B.a7,B.ik,B.ar),o,o)}s=A.d([],t.F)
 r=p.x
 if(r!=null)s.push(A.o1(A.eZ("\u6700\u7d42\u66f4\u65b0: "+(B.c.np(B.h.k(A.afs(r)),2,"0")+":"+B.c.np(B.h.k(A.aft(r)),2,"0")),B.Ox,B.cy),B.kN,o,o,o,B.ll,1/0))
 r=J.cL(p.f)
@@ -69239,7 +69239,7 @@ if(s==null){throw"DeferredLoading state error: code with hash '"+a+"' was not lo
 v.deferredInitialized[a]=true},
 deferredLibraryParts:{settings:[0]},
 deferredPartUris:["main.dart.js_1.part.js"],
-deferredPartHashes:["3jyW3DrPX5JwvD8F2xh8gCKVd0U="],
+deferredPartHashes:["K2Djmcjpk0G7sGVbomDcKUDsKls="],
 typeUniverse:{eC:new Map(),tR:{},eT:{},tPV:{},sEA:[]},
 mangledGlobalNames:{o:"int",I:"double",cK:"num",r:"String",A:"bool",aN:"Null",S:"List",D:"Object",aJ:"Map",ae:"JSObject"},
 mangledNames:{},
@@ -71751,8 +71751,8 @@ B.O3=new A.j(!0,B.l,null,".AppleSystemUIFont",null,null,null,null,null,null,null
 B.L6=new A.j(!0,B.l,null,".AppleSystemUIFont",null,null,null,null,null,null,null,null,null,null,null,null,null,B.f,null,null,null,"blackRedwoodCity labelSmall",null,null,null,null)
 B.OX=new A.d_(B.ML,B.LO,B.MM,B.Nk,B.Lr,B.Lz,B.M6,B.N7,B.Ml,B.NQ,B.KX,B.Lh,B.NM,B.O3,B.L6)
 B.OY=new A.fw("\u8a73\u7d30\u3092\u78ba\u8a8d\uff08\u516c\u5f0f\u30b5\u30a4\u30c8\uff09",null,null,null,null)
-B.OZ=new A.fw("\u5217\u8eca\u904b\u884c\u60c5\u5831",null,null,null,null)
-B.P1=new A.fw("\u518d\u8a66\u884c",null,null,null,null)
+B.P0=new A.fw("\u518d\u8a66\u884c",null,null,null,null)
+B.P3=new A.fw("\u901a\u5b66\u570f\u9244\u9053\u904b\u884c\u60c5\u5831",null,null,null,null)
 B.RB=new A.a40(0,"system")
 B.wO=new A.x1(0)
 B.P4=new A.x1(0.5)
