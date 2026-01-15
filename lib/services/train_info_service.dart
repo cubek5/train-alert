@@ -52,17 +52,28 @@ class TrainInfoService {
   Future<bool> checkHealth() async {
     try {
       final url = '$_baseUrl/api/health';
+      if (kDebugMode) {
+        debugPrint('ヘルスチェック開始: $url');
+      }
+      
       final response = await http.get(
         Uri.parse(url),
         headers: {
           'Accept': 'application/json',
         },
       ).timeout(
-        const Duration(seconds: 30), // ヘルスチェックも延長
+        const Duration(seconds: 60), // Renderのコールドスタートを考慮して60秒に延長
       );
 
+      if (kDebugMode) {
+        debugPrint('ヘルスチェック結果: ${response.statusCode}');
+      }
+      
       return response.statusCode == 200;
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ヘルスチェックエラー: $e');
+      }
       return false;
     }
   }

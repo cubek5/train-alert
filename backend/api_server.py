@@ -42,6 +42,36 @@ def update_train_info():
         time.sleep(UPDATE_INTERVAL)
 
 
+def keep_alive():
+    """サーバーをアクティブに保つ（Renderのスリープ防止）"""
+    import urllib.request
+    import ssl
+    
+    # SSL証明書検証をスキップ（自己リクエストのため）
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
+    while True:
+        try:
+            # 10分ごとに自分自身にリクエスト
+            time.sleep(600)  # 10分 = 600秒
+            
+            # 環境変数からRenderのURLを取得（なければlocalhost）
+            import os
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:8080')
+            url = f"{base_url}/api/health"
+            
+            print(f"[{datetime.now()}] Keep-Alive ping: {url}")
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, context=ssl_context, timeout=10) as response:
+                if response.status == 200:
+                    print(f"[{datetime.now()}] Keep-Alive成功")
+        except Exception as e:
+            print(f"Keep-Aliveエラー: {e}")
+            # エラーでも継続
+
+
 @app.route('/api/train-info', methods=['GET'])
 def get_train_info():
     """列車運行情報を取得するエンドポイント"""
@@ -91,6 +121,11 @@ if __name__ == '__main__':
     # バックグラウンドで定期更新スレッドを起動
     update_thread = threading.Thread(target=update_train_info, daemon=True)
     update_thread.start()
+    
+    # Keep-Aliveスレッドを起動（Renderのスリープ防止）
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    print("Keep-Aliveスレッド起動（10分ごとにping）")
     
     # 初回データ取得
     print("初回データ取得中...")
