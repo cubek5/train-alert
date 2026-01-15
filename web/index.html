@@ -23,13 +23,13 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="通学圏鉄道運行情報">
+  <meta name="apple-mobile-web-app-title" content="列車運行情報">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>通学圏鉄道運行情報</title>
+  <title>列車運行情報</title>
   <link rel="manifest" href="manifest.json">
   
   <!-- リソースのプリロード（高速化） -->
@@ -42,7 +42,7 @@
   <div id="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #f5f5f5; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; z-index: 9999; overflow: hidden;">
     <!-- AppBar Skeleton -->
     <div style="background: linear-gradient(90deg, #0066B3 0%, #0052a3 100%); height: 56px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div style="color: white; font-size: 20px; font-weight: 500;">通学圏鉄道運行情報</div>
+      <div style="color: white; font-size: 20px; font-weight: 500;">列車運行情報</div>
     </div>
     
     <!-- Content Skeleton -->
@@ -110,6 +110,12 @@
   </style>
   
   <script>
+    // Flutter Web設定（HTMLレンダラー使用で高速化）
+    window.flutterConfiguration = {
+      canvasKitBaseUrl: "canvaskit/",
+      renderer: "html"  // HTMLレンダラー使用（CanvasKitより軽量・高速）
+    };
+    
     // 早期初期化チェック（DOMContentLoaded）
     let earlyLoadDetected = false;
     document.addEventListener('DOMContentLoaded', function() {
@@ -125,14 +131,32 @@
       }, 2000); // 2秒後にチェック
     });
     
-    // Service Worker登録（一時的に無効化 - 無限ループ防止）
-    // カスタムService Workerは後で有効化
+    // カスタムService Workerの登録（最適化されたキャッシュ戦略）
     if ('serviceWorker' in navigator) {
-      // 既存のService Workerをアンレジスター
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
-        }
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw-custom.js')
+          .then((registration) => {
+            console.log('SW registered:', registration);
+            // 新しいService Workerが待機中の場合、即座にアクティベート
+            if (registration.waiting) {
+              registration.waiting.postMessage({ action: 'skipWaiting' });
+            }
+          })
+          .catch((error) => {
+            console.log('SW registration failed:', error);
+            // フォールバック: Flutterデフォルトを使用
+            navigator.serviceWorker.register('flutter_service_worker.js');
+          });
+        
+        // Service Workerの更新を監視（無限リロード防止）
+        let controllerChangeFired = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!controllerChangeFired) {
+            controllerChangeFired = true;
+            console.log('SW controller changed');
+            // リロードは手動で実施してもらう（無限リロープを防止）
+          }
+        });
       });
     }
     
