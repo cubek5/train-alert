@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="京都周辺の列車運行情報をリアルタイムで確認">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="列車運行情報">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>列車運行情報</title>
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- リソースのプリロード（高速化） -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="flutter.js" as="script">
+  <link rel="dns-prefetch" href="https://train-alert.onrender.com">
+</head>
+<body style="margin: 0; padding: 0; background-color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+  <!-- Flutter読み込み中の表示（Skeleton Screen） -->
+  <div id="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #f5f5f5; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; z-index: 9999; overflow: hidden;">
+    <!-- AppBar Skeleton -->
+    <div style="background: linear-gradient(90deg, #0066B3 0%, #0052a3 100%); height: 56px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="color: white; font-size: 20px; font-weight: 500;">列車運行情報</div>
+    </div>
+    
+    <!-- Content Skeleton -->
+    <div style="flex: 1; padding: 16px; overflow-y: auto;">
+      <!-- Loading Message -->
+      <div style="text-align: center; margin-bottom: 24px; padding: 20px;">
+        <div style="width: 48px; height: 48px; border: 3px solid #e0e0e0; border-top: 3px solid #0066B3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+        <p style="font-size: 16px; color: #666; margin: 0 0 8px;">サーバー起動中...</p>
+        <p style="font-size: 14px; color: #999; margin: 0;">初回は30〜60秒程度かかります</p>
+        <p style="font-size: 12px; color: #999; margin: 8px 0 0;">※ 無料サーバーのため起動に時間がかかります</p>
+      </div>
+      
+      <!-- Skeleton Cards (列車カードのプレースホルダー) -->
+      <div style="max-width: 800px; margin: 0 auto;">
+        <!-- Card 1 -->
+        <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); animation: pulse 1.5s ease-in-out infinite;">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <div style="width: 60px; height: 24px; background: #e0e0e0; border-radius: 12px; margin-right: 12px;"></div>
+            <div style="width: 120px; height: 20px; background: #e0e0e0; border-radius: 4px;"></div>
+          </div>
+          <div style="width: 80px; height: 18px; background: #f0f0f0; border-radius: 4px;"></div>
+        </div>
+        
+        <!-- Card 2 -->
+        <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); animation: pulse 1.5s ease-in-out infinite; animation-delay: 0.2s;">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <div style="width: 60px; height: 24px; background: #e0e0e0; border-radius: 12px; margin-right: 12px;"></div>
+            <div style="width: 120px; height: 20px; background: #e0e0e0; border-radius: 4px;"></div>
+          </div>
+          <div style="width: 80px; height: 18px; background: #f0f0f0; border-radius: 4px;"></div>
+        </div>
+        
+        <!-- Card 3 -->
+        <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); animation: pulse 1.5s ease-in-out infinite; animation-delay: 0.4s;">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <div style="width: 60px; height: 24px; background: #e0e0e0; border-radius: 12px; margin-right: 12px;"></div>
+            <div style="width: 120px; height: 20px; background: #e0e0e0; border-radius: 4px;"></div>
+          </div>
+          <div style="width: 80px; height: 18px; background: #f0f0f0; border-radius: 4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    /* Flutterアプリが読み込まれたらローディング画面を非表示 */
+    body.flutter-loaded #loading {
+      opacity: 0;
+      transition: opacity 0.3s ease-out;
+      pointer-events: none;
+    }
+    
+    body.flutter-loaded #loading {
+      display: none;
+    }
+  </style>
+  
+  <script>
+    // Flutter Web設定（HTMLレンダラー使用で高速化）
+    window.flutterConfiguration = {
+      canvasKitBaseUrl: "canvaskit/",
+      renderer: "html"  // HTMLレンダラー使用（CanvasKitより軽量・高速）
+    };
+    
+    // 早期初期化チェック（DOMContentLoaded）
+    let earlyLoadDetected = false;
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM ready - checking for early Flutter load');
+      // Flutterが既に読み込み済みかチェック
+      setTimeout(function() {
+        const flutterRoot = document.querySelector('flt-glass-pane');
+        if (flutterRoot) {
+          console.log('Flutter already loaded at DOMContentLoaded');
+          earlyLoadDetected = true;
+          document.body.classList.add('flutter-loaded');
+        }
+      }, 2000); // 2秒後にチェック
+    });
+    
+    // カスタムService Workerの登録（最適化されたキャッシュ戦略）
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw-custom.js')
+          .then((registration) => {
+            console.log('SW registered:', registration);
+            // 新しいService Workerが待機中の場合、即座にアクティベート
+            if (registration.waiting) {
+              registration.waiting.postMessage({ action: 'skipWaiting' });
+            }
+          })
+          .catch((error) => {
+            console.log('SW registration failed:', error);
+            // フォールバック: Flutterデフォルトを使用
+            navigator.serviceWorker.register('flutter_service_worker.js?v=3600732622');
+          });
+        
+        // Service Workerの更新を監視（無限リロード防止）
+        let controllerChangeFired = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!controllerChangeFired) {
+            controllerChangeFired = true;
+            console.log('SW controller changed');
+            // リロードは手動で実施してもらう（無限リロープを防止）
+          }
+        });
+      });
+    }
+    
+    // 起動時間の測定
+    const startTime = performance.now();
+    let loadCompleted = false;
+    
+    // Flutterアプリが完全に読み込まれたらローディング画面を非表示
+    window.addEventListener('flutter-first-frame', function() {
+      if (!loadCompleted) {
+        loadCompleted = true;
+        const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+        console.log(`Flutter起動完了: ${loadTime}秒`);
+        document.body.classList.add('flutter-loaded');
+      }
+    });
+    
+    // プログレス表示の更新
+    let progressSeconds = 0;
+    const progressInterval = setInterval(function() {
+      progressSeconds++;
+      if (progressSeconds >= 10 && !loadCompleted) {
+        console.log(`読み込み中... ${progressSeconds}秒経過`);
+      }
+      if (loadCompleted) {
+        clearInterval(progressInterval);
+      }
+    }, 1000);
+    
+    // フォールバック1: 10秒でローディング画面を非表示（プレビュー対応）
+    setTimeout(function() {
+      if (!loadCompleted && !document.body.classList.contains('flutter-loaded')) {
+        console.warn('フォールバック1: 10秒でローディング画面を非表示');
+        loadCompleted = true;
+        document.body.classList.add('flutter-loaded');
+      }
+    }, 10000);
+    
+    // フォールバック2: 最大20秒で強制的に非表示
+    setTimeout(function() {
+      if (!document.body.classList.contains('flutter-loaded')) {
+        console.warn('フォールバック2: 20秒で強制的にローディング画面を非表示');
+        loadCompleted = true;
+        document.body.classList.add('flutter-loaded');
+      }
+    }, 20000);
+  </script>
+  
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

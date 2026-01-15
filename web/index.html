@@ -50,8 +50,9 @@
       <!-- Loading Message -->
       <div style="text-align: center; margin-bottom: 24px; padding: 20px;">
         <div style="width: 48px; height: 48px; border: 3px solid #e0e0e0; border-top: 3px solid #0066B3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-        <p style="font-size: 16px; color: #666; margin: 0 0 8px;">読み込み中...</p>
-        <p style="font-size: 14px; color: #999; margin: 0;">初回は10〜15秒程度かかります</p>
+        <p style="font-size: 16px; color: #666; margin: 0 0 8px;">サーバー起動中...</p>
+        <p style="font-size: 14px; color: #999; margin: 0;">初回は30〜60秒程度かかります</p>
+        <p style="font-size: 12px; color: #999; margin: 8px 0 0;">※ 無料サーバーのため起動に時間がかかります</p>
       </div>
       
       <!-- Skeleton Cards (列車カードのプレースホルダー) -->
@@ -110,6 +111,12 @@
   </style>
   
   <script>
+    // Flutter Web設定（HTMLレンダラー使用で高速化）
+    window.flutterConfiguration = {
+      canvasKitBaseUrl: "canvaskit/",
+      renderer: "html"  // HTMLレンダラー使用（CanvasKitより軽量・高速）
+    };
+    
     // 早期初期化チェック（DOMContentLoaded）
     let earlyLoadDetected = false;
     document.addEventListener('DOMContentLoaded', function() {
@@ -142,10 +149,14 @@
             navigator.serviceWorker.register('flutter_service_worker.js');
           });
         
-        // Service Workerの更新を監視
+        // Service Workerの更新を監視（無限リロード防止）
+        let controllerChangeFired = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('SW controller changed - reloading');
-          window.location.reload();
+          if (!controllerChangeFired) {
+            controllerChangeFired = true;
+            console.log('SW controller changed');
+            // リロードは手動で実施してもらう（無限リロープを防止）
+          }
         });
       });
     }

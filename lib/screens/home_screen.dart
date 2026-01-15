@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('列車運行情報'),
+        title: const Text('通学圏鉄道運行情報'),
         actions: [
           // 通知設定トグル
           Padding(
