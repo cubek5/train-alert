@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/train_info.dart';
 import '../services/train_info_service.dart';
 import '../services/notification_service.dart';
@@ -258,6 +259,61 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(fontSize: 12),
               ),
             ),
+          // 重要なお知らせへの注意喚起バナー
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            color: Colors.orange[50],
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[800], size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '重要なお知らせがある場合があります',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          // JR西日本公式サイトを開く
+                          final Uri url = Uri.parse('https://trafficinfo.westjr.co.jp/kinki.html');
+                          try {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            // エラーハンドリング
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('ブラウザを開けませんでした'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Text(
+                          '詳細はJR西日本公式サイトをご確認ください →',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           // 路線別情報一覧
           Expanded(
             child: ListView.builder(
