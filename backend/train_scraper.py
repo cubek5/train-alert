@@ -45,61 +45,72 @@ class TrainInfoScraper:
                 return None
         return None
 
-    def _get_yahoo_line_info(self, line_code: str, line_name: str, company: str) -> Dict:
-        """Yahoo!路線情報から取得（ハイブリッド用）"""
-        url = f"https://transit.yahoo.co.jp/diainfo/{line_code}/0"
+    def _get_yahoo_line_info_hybrid(self, line_code: str, line_name: str, company: str) -> Dict:
+        """Yahoo!路線情報からハイブリッド取得（一覧ページ + 詳細ページ）"""
+        detail_url = f"https://transit.yahoo.co.jp/diainfo/{line_code}/0"
         
         try:
-            soup = self._fetch_with_retry(url)
+            # 詳細ページから運行情報を取得
+            soup = self._fetch_with_retry(detail_url)
             if not soup:
-                raise Exception("ページ取得失敗")
+                raise Exception("詳細ページ取得失敗")
             
-            # 運行状況を取得
-            status_elem = soup.select_one('.trouble')
+            # 初期値
+            status = "平常運転"
+            delay_minutes = 0
+            details = ""
             
-            if status_elem and '平常運転' not in status_elem.get_text():
-                # 遅延または運転見合わせ
-                title = status_elem.select_one('h3')
-                if title:
-                    status_text = title.get_text(strip=True)
-                    
-                    if '運転見合わせ' in status_text or '運休' in status_text:
-                        status = '運転見合わせ'
+            # タイトルから状態を確認
+            title = soup.find('title')
+            if title:
+                title_text = title.get_text()
+                if '遅延' in title_text:
+                    status = "遅延あり"
+                elif '運転見合わせ' in title_text:
+                    status = "運転見合わせ"
+            
+            # トラブル情報セクションを取得
+            trouble_section = soup.find('div', class_=re.compile(r'trouble'))
+            if trouble_section:
+                details_text = trouble_section.get_text(strip=True)
+                
+                # 遅延時間を抽出
+                delay_match = re.search(r'(\d+)分', details_text)
+                if delay_match:
+                    delay_minutes = int(delay_match.group(1))
+                
+                details = details_text[:300]  # 最大300文字
+                
+                # 状態を再判定
+                if details:
+                    if '運転見合わせ' in details or '運休' in details:
+                        status = "運転見合わせ"
                         delay_minutes = 0
-                    else:
-                        status = '遅延あり'
-                        # 遅延時間を抽出
-                        delay_match = re.search(r'(\d+)分', status_text)
-                        delay_minutes = int(delay_match.group(1)) if delay_match else 20
-                    
-                    # 詳細情報を取得
-                    detail_elem = status_elem.select_one('.trouble-detail')
-                    if detail_elem:
-                        details = detail_elem.get_text(strip=True)[:300]
-                    else:
-                        details = status_text
-                    
-                    # 運転再開見込み時刻を抽出
-                    resume_time = self._extract_resume_time(details)
-                    if resume_time:
-                        details = f"【再開見込み: {resume_time}】 {details}"
-                    
-                    return {
-                        'company': company,
-                        'line': line_name,
-                        'status': status,
-                        'delay_minutes': delay_minutes,
-                        'details': details,
-                        'updated_at': datetime.now().isoformat()
-                    }
+                    elif '遅延' in details or '遅れ' in details:
+                        status = "遅延あり"
+                        if delay_minutes == 0:
+                            delay_minutes = 20  # デフォルト値
             
-            # 平常運転
+            # 平常運転を確認（トラブル情報がない場合）
+            page_text = soup.get_text()
+            if '平常' in page_text or '運行情報はありません' in page_text or '事故・遅延に関する情報はありません' in page_text:
+                if not details:
+                    status = "平常運転"
+                    delay_minutes = 0
+                    details = ""
+            
+            # 運転再開見込み時刻を抽出
+            if details:
+                resume_time = self._extract_resume_time(details)
+                if resume_time:
+                    details = f"【再開見込み: {resume_time}】 {details}"
+            
             return {
                 'company': company,
                 'line': line_name,
-                'status': '平常運転',
-                'delay_minutes': 0,
-                'details': '',
+                'status': status,
+                'delay_minutes': delay_minutes,
+                'details': details,
                 'updated_at': datetime.now().isoformat()
             }
             
@@ -290,15 +301,36 @@ class TrainInfoScraper:
             return results
             
         except Exception as e:
-            print(f"JR西日本の情報取得エラー: {e}")
-            return [{
-                'company': 'JR西日本',
-                'line': line,
-                'status': '情報取得エラー',
-                'delay_minutes': 0,
-                'details': '現在、情報を取得できません',
-                'updated_at': datetime.now().isoformat()
-            } for line in target_lines.keys()]
+            print(f"JR西日本公式サイト取得エラー: {e}")
+            print("Yahoo!路線情報からフォールバック取得を試みます...")
+            
+            # Yahoo!路線情報からフォールバック取得
+            yahoo_line_codes = {
+                "奈良線": "279",
+                "京都線": "267",
+                "琵琶湖線": "266",
+                "湖西線": "268",
+                "嵯峨野線": "270",
+                "学研都市線": "271"
+            }
+            
+            results = []
+            for line_name, line_code in yahoo_line_codes.items():
+                try:
+                    info = self._get_yahoo_line_info_hybrid(line_code, line_name, 'JR西日本')
+                    results.append(info)
+                except Exception as yahoo_error:
+                    print(f"Yahoo!フォールバック取得エラー ({line_name}): {yahoo_error}")
+                    results.append({
+                        'company': 'JR西日本',
+                        'line': line_name,
+                        'status': '情報取得エラー',
+                        'delay_minutes': 0,
+                        'details': '現在、情報を取得できません',
+                        'updated_at': datetime.now().isoformat()
+                    })
+            
+            return results
 
 
 
