@@ -141,17 +141,19 @@ class TrainInfoScraper:
         return None
 
     def get_keihan_info(self) -> List[Dict]:
-        """京阪電車の運行情報を取得（デフォルト: 平常運転）"""
-        # Yahoo! 路線情報が利用不可のため、デフォルト値を返す
-        # TODO: 将来的に公式APIが利用可能になったら実装を変更
-        return [{
-            'company': '京阪電車',
-            'line': '本線',
-            'status': '平常運転',
-            'delay_minutes': 0,
-            'details': '',
-            'updated_at': datetime.now().isoformat()
-        }]
+        """京阪電車の運行情報を取得（Yahoo!ハイブリッド）"""
+        try:
+            return [self._get_yahoo_line_info_hybrid("300", "本線", "京阪電車")]
+        except Exception as e:
+            print(f"京阪電車の情報取得エラー: {e}")
+            return [{
+                'company': '京阪電車',
+                'line': '本線',
+                'status': '情報取得エラー',
+                'delay_minutes': 0,
+                'details': '現在、情報を取得できません',
+                'updated_at': datetime.now().isoformat()
+            }]
 
     def get_jr_west_info(self) -> List[Dict]:
         """JR西日本の運行情報を取得（公式サイト + 学研都市線追加）"""
@@ -335,50 +337,61 @@ class TrainInfoScraper:
 
 
     def get_kintetsu_info(self) -> List[Dict]:
-        """近畿日本鉄道の運行情報を取得（デフォルト: 平常運転）"""
-        # Yahoo! 路線情報が利用不可のため、デフォルト値を返す
-        return [{
-            'company': '近畿日本鉄道',
-            'line': '京都線',
-            'status': '平常運転',
-            'delay_minutes': 0,
-            'details': '',
-            'updated_at': datetime.now().isoformat()
-        }]
+        """近畿日本鉄道の運行情報を取得（Yahoo!ハイブリッド）"""
+        try:
+            return [self._get_yahoo_line_info_hybrid("288", "京都線", "近畿日本鉄道")]
+        except Exception as e:
+            print(f"近畿日本鉄道の情報取得エラー: {e}")
+            return [{
+                'company': '近畿日本鉄道',
+                'line': '京都線',
+                'status': '情報取得エラー',
+                'delay_minutes': 0,
+                'details': '現在、情報を取得できません',
+                'updated_at': datetime.now().isoformat()
+            }]
 
     def get_hankyu_info(self) -> List[Dict]:
-        """阪急電車の運行情報を取得（デフォルト: 平常運転）"""
-        # 公式ページが利用不可のため、デフォルト値を返す
-        return [{
-            'company': '阪急電車',
-            'line': '京都線',
-            'status': '平常運転',
-            'delay_minutes': 0,
-            'details': '',
-            'updated_at': datetime.now().isoformat()
-        }]
+        """阪急電車の運行情報を取得（Yahoo!ハイブリッド）"""
+        try:
+            return [self._get_yahoo_line_info_hybrid("306", "京都本線", "阪急電車")]
+        except Exception as e:
+            print(f"阪急電車の情報取得エラー: {e}")
+            return [{
+                'company': '阪急電車',
+                'line': '京都本線',
+                'status': '情報取得エラー',
+                'delay_minutes': 0,
+                'details': '現在、情報を取得できません',
+                'updated_at': datetime.now().isoformat()
+            }]
 
     def get_kyoto_subway_info(self) -> List[Dict]:
-        """京都市営地下鉄の運行情報を取得（デフォルト: 平常運転）"""
-        # Yahoo! 路線情報が利用不可のため、デフォルト値を返す
-        return [
-            {
-                'company': '京都市営地下鉄',
-                'line': '烏丸線',
-                'status': '平常運転',
-                'delay_minutes': 0,
-                'details': '',
-                'updated_at': datetime.now().isoformat()
-            },
-            {
-                'company': '京都市営地下鉄',
-                'line': '東西線',
-                'status': '平常運転',
-                'delay_minutes': 0,
-                'details': '',
-                'updated_at': datetime.now().isoformat()
-            }
-        ]
+        """京都市営地下鉄の運行情報を取得（Yahoo!ハイブリッド）"""
+        try:
+            karasuma = self._get_yahoo_line_info_hybrid("318", "烏丸線", "京都市営地下鉄")
+            tozai = self._get_yahoo_line_info_hybrid("319", "東西線", "京都市営地下鉄")
+            return [karasuma, tozai]
+        except Exception as e:
+            print(f"京都市営地下鉄の情報取得エラー: {e}")
+            return [
+                {
+                    'company': '京都市営地下鉄',
+                    'line': '烏丸線',
+                    'status': '情報取得エラー',
+                    'delay_minutes': 0,
+                    'details': '現在、情報を取得できません',
+                    'updated_at': datetime.now().isoformat()
+                },
+                {
+                    'company': '京都市営地下鉄',
+                    'line': '東西線',
+                    'status': '情報取得エラー',
+                    'delay_minutes': 0,
+                    'details': '現在、情報を取得できません',
+                    'updated_at': datetime.now().isoformat()
+                }
+            ]
 
     def get_all_train_info(self) -> Dict:
         """すべての鉄道会社の運行情報を並列取得（高速化）"""
