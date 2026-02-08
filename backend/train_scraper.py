@@ -60,50 +60,41 @@ class TrainInfoScraper:
             delay_minutes = 0
             details = ""
             
-            # タイトルから状態を確認
-            title = soup.find('title')
-            if title:
-                title_text = title.get_text()
-                if '遅延' in title_text:
-                    status = "遅延あり"
-                elif '運転見合わせ' in title_text:
+            # ステータスを取得（<dt>タグから）
+            dt_tag = soup.find('dt')
+            if dt_tag:
+                status_text = dt_tag.get_text(strip=True)
+                if '運転見合わせ' in status_text:
                     status = "運転見合わせ"
-            
-            # トラブル情報セクションを取得
-            trouble_section = soup.find('div', class_=re.compile(r'trouble'))
-            if trouble_section:
-                details_text = trouble_section.get_text(strip=True)
+                    delay_minutes = 0
+                elif '遅延' in status_text:
+                    status = "遅延あり"
+                elif '運転状況' in status_text:
+                    status = "運転状況"
                 
-                # 遅延時間を抽出
-                delay_match = re.search(r'(\d+)分', details_text)
-                if delay_match:
-                    delay_minutes = int(delay_match.group(1))
-                
-                details = details_text[:300]  # 最大300文字
-                
-                # 状態を再判定
-                if details:
-                    if '運転見合わせ' in details or '運休' in details:
-                        status = "運転見合わせ"
-                        delay_minutes = 0
-                    elif '遅延' in details or '遅れ' in details:
-                        status = "遅延あり"
-                        if delay_minutes == 0:
-                            delay_minutes = 20  # デフォルト値
-            
-            # 平常運転を確認（トラブル情報がない場合）
-            page_text = soup.get_text()
-            if '平常' in page_text or '運行情報はありません' in page_text or '事故・遅延に関する情報はありません' in page_text:
-                if not details:
+                # 詳細情報を取得（<dt>の次の兄弟要素<dd>から）
+                detail_p = dt_tag.find_next_sibling('dd')
+                if detail_p:
+                    details = detail_p.get_text(strip=True)[:300]
+                    
+                    # 遅延時間を抽出
+                    delay_match = re.search(r'(\d+)分', details)
+                    if delay_match:
+                        delay_minutes = int(delay_match.group(1))
+                    elif status == "遅延あり" and delay_minutes == 0:
+                        delay_minutes = 20  # デフォルト値
+                    
+                    # 運転再開見込み時刻を抽出
+                    resume_time = self._extract_resume_time(details)
+                    if resume_time:
+                        details = f"【再開見込み: {resume_time}】 {details}"
+            else:
+                # <dt>タグがない場合は平常運転
+                page_text = soup.get_text()
+                if '平常運転' in page_text or '事故・遅延情報はありません' in page_text:
                     status = "平常運転"
                     delay_minutes = 0
                     details = ""
-            
-            # 運転再開見込み時刻を抽出
-            if details:
-                resume_time = self._extract_resume_time(details)
-                if resume_time:
-                    details = f"【再開見込み: {resume_time}】 {details}"
             
             return {
                 'company': company,
@@ -156,183 +147,35 @@ class TrainInfoScraper:
             }]
 
     def get_jr_west_info(self) -> List[Dict]:
-        """JR西日本の運行情報を取得（公式サイト + 学研都市線追加）"""
-        url = "https://trafficinfo.westjr.co.jp/kinki.html"
-        target_lines = {
-            "奈良線": ["奈良線"],
-            "京都線": ["京都線", "ＪＲ京都線"],
-            "琵琶湖線": ["琵琶湖線"],
-            "湖西線": ["湖西線"],
-            "嵯峨野線": ["嵯峨野線"],
-            "学研都市線": ["学研都市線", "片町線"]
+        """JR西日本の運行情報を取得（Yahoo!ハイブリッド）"""
+        
+        # Yahoo!路線情報から直接取得（JR西日本公式サイトは構造が複雑なため）
+        yahoo_line_codes = {
+            "奈良線": "279",
+            "京都線": "267",
+            "琵琶湖線": "266",
+            "湖西線": "268",
+            "嵯峨野線": "270",
+            "学研都市線": "271"
         }
         
-        # 影響線区をチェックするための追加路線（結果には含めない）
-        # 各対象路線に影響を与える可能性のある路線をすべて含める
-        check_lines_for_impact = {
-            # 奈良線への影響
-            "大阪環状線": ["大阪環状線"],
-            "大和路線": ["大和路線"],
-            
-            # 京都線・琵琶湖線・湖西線への影響
-            "ＪＲ神戸線": ["ＪＲ神戸線", "神戸線"],
-            
-            # 学研都市線への影響
-            "おおさか東線": ["おおさか東線"],
-            
-            # その他の主要路線（相互に影響する可能性）
-            "阪和線": ["阪和線"],
-            "関西線": ["関西線"],
-            "ＪＲ東西線": ["ＪＲ東西線"],
-            "ＪＲゆめ咲線": ["ＪＲゆめ咲線"]
-        }
+        results = []
+        for line_name, line_code in yahoo_line_codes.items():
+            try:
+                info = self._get_yahoo_line_info_hybrid(line_code, line_name, 'JR西日本')
+                results.append(info)
+            except Exception as e:
+                print(f"Yahoo!取得エラー ({line_name}): {e}")
+                results.append({
+                    'company': 'JR西日本',
+                    'line': line_name,
+                    'status': '情報取得エラー',
+                    'delay_minutes': 0,
+                    'details': '現在、情報を取得できません',
+                    'updated_at': datetime.now().isoformat()
+                })
         
-        # 全チェック対象路線（target_lines + check_lines_for_impact）
-        all_check_lines = {**target_lines, **check_lines_for_impact}
-        
-        try:
-            soup = self._fetch_with_retry(url, encoding='shift_jis')
-            if not soup:
-                raise Exception("ページ取得失敗")
-            
-            results = []
-            found_lines = {}
-            
-            # 運行情報一覧を取得（HTMLの構造に合わせて修正）
-            # 方法1: ul.page_downを探す（従来の方法）
-            info_list = soup.find('ul', class_='page_down')
-            if not info_list:
-                # 方法2: すべてのulタグからli > aを含むものを探す
-                all_uls = soup.find_all('ul')
-                for ul in all_uls:
-                    if ul.find('li') and ul.find('a'):
-                        info_list = ul
-                        break
-            
-            if info_list:
-                items = info_list.find_all('li')
-                for item in items:
-                    link = item.find('a')
-                    if not link:
-                        continue
-                    
-                    text = link.get_text()
-                    link_id = link.get('href', '').replace('#', '')
-                    
-                    # 全チェック対象路線かチェック（target_lines + check_lines_for_impact）
-                    for line_name, line_patterns in all_check_lines.items():
-                        if any(pattern in text for pattern in line_patterns):
-                            # 詳細情報を取得
-                            detail_anchor = soup.find('a', {'name': link_id})
-                            if detail_anchor:
-                                parent_div = detail_anchor.find_parent('div', class_='jisyo')
-                                if parent_div:
-                                    detail_text = parent_div.get_text()
-                                    
-                                    # 運転見合わせの検出
-                                    if '運転見合わせ' in text or '運転見合わせ' in detail_text:
-                                        status = '運転見合わせ'
-                                        delay_minutes = 0
-                                    elif '遅延' in text or '遅れ' in detail_text:
-                                        status = '遅延あり'
-                                        delay_match = re.search(r'(\d+)分', detail_text)
-                                        delay_minutes = int(delay_match.group(1)) if delay_match else 20
-                                    else:
-                                        status = '遅延あり'
-                                        delay_minutes = 20
-                                    
-                                    # 詳細情報を抽出
-                                    gaiyo = parent_div.find('p', class_='gaiyo')
-                                    if gaiyo:
-                                        details = gaiyo.get_text().strip().replace('\n', ' ').replace('\r', '')[:300]
-                                    else:
-                                        details = text
-                                    
-                                    # 運転再開見込み時刻を抽出
-                                    resume_time = self._extract_resume_time(detail_text)
-                                    if resume_time:
-                                        details = f"【再開見込み: {resume_time}】 {details}"
-                                    
-                                    # 対象路線のみ登録（大阪環状線等のチェック用路線は除外）
-                                    if line_name in target_lines:
-                                        found_lines[line_name] = {
-                                            'company': 'JR西日本',
-                                            'line': line_name,
-                                            'status': status,
-                                            'delay_minutes': delay_minutes,
-                                            'details': details,
-                                            'updated_at': datetime.now().isoformat()
-                                        }
-                                    
-                                    # 【重要】影響線区を解析して、他の対象路線にも情報を設定
-                                    # 影響線区は <span class='line'> に記載されている
-                                    line_spans = parent_div.find_all('span', class_='line')
-                                    for line_span in line_spans:
-                                        line_text = line_span.get_text()
-                                        # 各対象路線をチェック（target_linesのみ）
-                                        for check_line_name, check_patterns in target_lines.items():
-                                            if check_line_name not in found_lines:  # まだ登録されていない路線
-                                                if any(pattern in line_text for pattern in check_patterns):
-                                                    # 影響を受けている路線として登録
-                                                    found_lines[check_line_name] = {
-                                                        'company': 'JR西日本',
-                                                        'line': check_line_name,
-                                                        'status': status,
-                                                        'delay_minutes': delay_minutes,
-                                                        'details': details,  # 同じ詳細情報を使用
-                                                        'updated_at': datetime.now().isoformat()
-                                                    }
-                                    break
-            
-            # 見つかった路線の情報を追加
-            for line_info in found_lines.values():
-                results.append(line_info)
-            
-            # 情報がない路線は平常運転とする
-            for line_name in target_lines.keys():
-                if line_name not in found_lines:
-                    results.append({
-                        'company': 'JR西日本',
-                        'line': line_name,
-                        'status': '平常運転',
-                        'delay_minutes': 0,
-                        'details': '',
-                        'updated_at': datetime.now().isoformat()
-                    })
-            
-            return results
-            
-        except Exception as e:
-            print(f"JR西日本公式サイト取得エラー: {e}")
-            print("Yahoo!路線情報からフォールバック取得を試みます...")
-            
-            # Yahoo!路線情報からフォールバック取得
-            yahoo_line_codes = {
-                "奈良線": "279",
-                "京都線": "267",
-                "琵琶湖線": "266",
-                "湖西線": "268",
-                "嵯峨野線": "270",
-                "学研都市線": "271"
-            }
-            
-            results = []
-            for line_name, line_code in yahoo_line_codes.items():
-                try:
-                    info = self._get_yahoo_line_info_hybrid(line_code, line_name, 'JR西日本')
-                    results.append(info)
-                except Exception as yahoo_error:
-                    print(f"Yahoo!フォールバック取得エラー ({line_name}): {yahoo_error}")
-                    results.append({
-                        'company': 'JR西日本',
-                        'line': line_name,
-                        'status': '情報取得エラー',
-                        'delay_minutes': 0,
-                        'details': '現在、情報を取得できません',
-                        'updated_at': datetime.now().isoformat()
-                    })
-            
-            return results
+        return results
 
 
 
